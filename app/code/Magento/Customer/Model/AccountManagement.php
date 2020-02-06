@@ -985,7 +985,7 @@ class AccountManagement implements AccountManagementInterface
                 $templateType = self::NEW_ACCOUNT_EMAIL_REGISTERED_NO_PASSWORD;
             }
             $this->getEmailNotification()->newAccount($customer, $templateType, $redirectUrl, $customer->getStoreId());
-            if($templateType != self::NEW_ACCOUNT_EMAIL_CONFIRMATION){
+            if ($templateType != self::NEW_ACCOUNT_EMAIL_CONFIRMATION) {
                 $customer->setConfirmation(null);
             }
         } catch (MailException $e) {

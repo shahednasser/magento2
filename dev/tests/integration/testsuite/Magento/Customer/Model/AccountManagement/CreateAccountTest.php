@@ -18,6 +18,7 @@ use Magento\Framework\Api\DataObjectHelper;
 use Magento\Framework\Api\ExtensibleDataObjectConverter;
 use Magento\Framework\Api\SimpleDataObjectConverter;
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\Config\Storage\WriterInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\InputException;
 use Magento\Framework\Exception\LocalizedException;
@@ -31,8 +32,6 @@ use Magento\TestFramework\Helper\Bootstrap;
 use Magento\TestFramework\Helper\Xpath;
 use Magento\TestFramework\Mail\Template\TransportBuilderMock;
 use PHPUnit\Framework\TestCase;
-use Magento\Framework\App\Config\Storage\WriterInterface;
-
 
 /**
  * Tests for customer creation via customer account management service.
@@ -313,10 +312,15 @@ class CreateAccountTest extends TestCase
     public function testCreateNewCustomerConfirmation($expected, $is_confirmation_required): void
     {
         $website_id = 1;
-        $this->configWriter->save(AccountConfirmation::XML_PATH_IS_CONFIRM, $is_confirmation_required, ScopeInterface::SCOPE_WEBSITES, $website_id);
+        $this->configWriter->save(
+            AccountConfirmation::XML_PATH_IS_CONFIRM,
+            $is_confirmation_required,
+            ScopeInterface::SCOPE_WEBSITES,
+            $website_id
+        );
         $this->scopeConfig->clean();
 
-        $customerData = $expectedCustomerData = [
+        $customerData = [
             CustomerInterface::EMAIL => 'email@example.com',
             CustomerInterface::STORE_ID => 1,
             CustomerInterface::FIRSTNAME => 'Tester',

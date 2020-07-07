@@ -11,11 +11,13 @@ use Magento\Customer\Api\AccountManagementInterface;
 use Magento\Customer\Api\CustomerRepositoryInterface;
 use Magento\Customer\Api\Data\CustomerInterface;
 use Magento\Customer\Api\Data\CustomerInterfaceFactory;
+use Magento\Customer\Model\AccountConfirmation;
 use Magento\Customer\Model\Customer;
 use Magento\Customer\Model\CustomerFactory;
 use Magento\Framework\Api\DataObjectHelper;
 use Magento\Framework\Api\ExtensibleDataObjectConverter;
 use Magento\Framework\Api\SimpleDataObjectConverter;
+use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\InputException;
 use Magento\Framework\Exception\LocalizedException;
@@ -23,11 +25,14 @@ use Magento\Framework\Exception\State\InputMismatchException;
 use Magento\Framework\Math\Random;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\Validator\Exception;
+use Magento\Store\Model\ScopeInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 use Magento\TestFramework\Helper\Xpath;
 use Magento\TestFramework\Mail\Template\TransportBuilderMock;
 use PHPUnit\Framework\TestCase;
+use Magento\Framework\App\Config\Storage\WriterInterface;
+
 
 /**
  * Tests for customer creation via customer account management service.
@@ -102,6 +107,16 @@ class CreateAccountTest extends TestCase
     private $encryptor;
 
     /**
+     * @var ScopeConfigInterface
+     */
+    private $scopeConfig;
+
+    /**
+     * @var WriterInterface
+     */
+    private $configWriter;
+
+    /**
      * @inheritdoc
      */
     protected function setUp(): void
@@ -117,6 +132,8 @@ class CreateAccountTest extends TestCase
         $this->customerModelFactory = $this->objectManager->get(CustomerFactory::class);
         $this->random = $this->objectManager->get(Random::class);
         $this->encryptor = $this->objectManager->get(EncryptorInterface::class);
+        $this->scopeConfig = $this->objectManager->get(ScopeConfigInterface::class);
+        $this->configWriter = $this->objectManager->get(WriterInterface::class);
         parent::setUp();
     }
 
@@ -285,6 +302,51 @@ class CreateAccountTest extends TestCase
             $savedCustomer->getId(),
             $this->accountManagement->authenticate($customerData[CustomerInterface::EMAIL], $password)->getId()
         );
+    }
+
+    /**
+     * @dataProvider testCreateNewCustomerConfirmationKeyProvider
+     * @param string $expected
+     * @param string $is_confirmation_required
+     * @return void
+     */
+    public function testCreateNewCustomerConfirmation($expected, $is_confirmation_required): void
+    {
+        $website_id = 1;
+        $this->configWriter->save(AccountConfirmation::XML_PATH_IS_CONFIRM, $is_confirmation_required, ScopeInterface::SCOPE_WEBSITES, $website_id);
+        $this->scopeConfig->clean();
+
+        $customerData = $expectedCustomerData = [
+            CustomerInterface::EMAIL => 'email@example.com',
+            CustomerInterface::STORE_ID => 1,
+            CustomerInterface::FIRSTNAME => 'Tester',
+            CustomerInterface::LASTNAME => 'McTest',
+            CustomerInterface::GROUP_ID => 1,
+            CustomerInterface::WEBSITE_ID => $website_id
+        ];
+        $newCustomerEntity = $this->populateCustomerEntity($customerData);
+        $password = $this->random->getRandomString(8);
+        $passwordHash = $this->encryptor->getHash($password, true);
+        $savedCustomer = $this->accountManagement->createAccountWithPasswordHash(
+            $newCustomerEntity,
+            $passwordHash
+        );
+        $this->assertNotNull($savedCustomer->getId());
+        $this->assertEquals($expected, $this->accountManagement->getConfirmationStatus($savedCustomer->getId()));
+    }
+
+    public function testCreateNewCustomerConfirmationKeyProvider(): array
+    {
+        return [
+            'confirmation_required' => [
+                'expected' => AccountManagementInterface::ACCOUNT_CONFIRMATION_REQUIRED,
+                'is_confirmation_required' => "1"
+            ],
+            'confirmation_not_required' => [
+                'expected' => AccountManagementInterface::ACCOUNT_CONFIRMATION_NOT_REQUIRED,
+                'is_confirmation_required' => "0"
+            ]
+        ];
     }
 
     /**

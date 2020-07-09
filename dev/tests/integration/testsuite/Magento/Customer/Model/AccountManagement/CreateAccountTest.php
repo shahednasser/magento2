@@ -306,17 +306,17 @@ class CreateAccountTest extends TestCase
     /**
      * @dataProvider testCreateNewCustomerConfirmationKeyProvider
      * @param string $expected
-     * @param string $is_confirmation_required
+     * @param string $isConfirmationRequired
      * @return void
      */
-    public function testCreateNewCustomerConfirmation($expected, $is_confirmation_required): void
+    public function testCreateNewCustomerConfirmation(string $expected, string $isConfirmationRequired): void
     {
-        $website_id = 1;
+        $websiteId = 1;
         $this->configWriter->save(
             AccountConfirmation::XML_PATH_IS_CONFIRM,
-            $is_confirmation_required,
+            $isConfirmationRequired,
             ScopeInterface::SCOPE_WEBSITES,
-            $website_id
+            $websiteId
         );
         $this->scopeConfig->clean();
 
@@ -326,7 +326,7 @@ class CreateAccountTest extends TestCase
             CustomerInterface::FIRSTNAME => 'Tester',
             CustomerInterface::LASTNAME => 'McTest',
             CustomerInterface::GROUP_ID => 1,
-            CustomerInterface::WEBSITE_ID => $website_id
+            CustomerInterface::WEBSITE_ID => $websiteId
         ];
         $newCustomerEntity = $this->populateCustomerEntity($customerData);
         $password = $this->random->getRandomString(8);
@@ -344,11 +344,11 @@ class CreateAccountTest extends TestCase
         return [
             'confirmation_required' => [
                 'expected' => AccountManagementInterface::ACCOUNT_CONFIRMATION_REQUIRED,
-                'is_confirmation_required' => "1"
+                'isConfirmationRequired' => "1"
             ],
             'confirmation_not_required' => [
                 'expected' => AccountManagementInterface::ACCOUNT_CONFIRMATION_NOT_REQUIRED,
-                'is_confirmation_required' => "0"
+                'isConfirmationRequired' => "0"
             ]
         ];
     }
